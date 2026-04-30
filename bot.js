@@ -1,4 +1,30 @@
 require('dotenv').config();
+
+const fs = require('fs');
+const SIGNAL_FILE = './signals.json';
+
+// Load signals from file on startup
+function loadSignals() {
+  try {
+    if (fs.existsSync(SIGNAL_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SIGNAL_FILE, 'utf8'));
+      signalLog.push(...data);
+      console.log(`Loaded ${data.length} signals from file`);
+    }
+  } catch (err) {
+    console.error('Error loading signals:', err.message);
+  }
+}
+
+// Save signals to file
+function saveSignals() {
+  try {
+    fs.writeFileSync(SIGNAL_FILE, JSON.stringify(signalLog), 'utf8');
+  } catch (err) {
+    console.error('Error saving signals:', err.message);
+  }
+}
+
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
@@ -65,7 +91,6 @@ async function searchToken(symbol) {
 const signalLog = []; // { symbol, price, time, conditions, strength }
 
 function logSignal(token, conditions, strength) {
-  // Remove duplicate if already logged in last 4 hours
   const existing = signalLog.find(s =>
     s.symbol === token.symbol &&
     Date.now() - s.time < 4 * 60 * 60 * 1000
@@ -83,8 +108,8 @@ function logSignal(token, conditions, strength) {
     exitPrice: null,
   });
 
-  // Keep only last 50 signals
   if (signalLog.length > 50) signalLog.shift();
+  saveSignals(); 
 }
 
 // Resolve signals older than 4 hours
@@ -421,9 +446,9 @@ bot.onText(/\/accuracy/, async (msg) => {
 
     const total = signalLog.length;
     if (total === 0) {
-      bot.sendMessage(chatId, `📊 *Signal Accuracy Tracker*\n\nNo signals logged yet.\n\nRun /signals a few times throughout the day.\nResults resolve after 4 hours.\n\n_Come back later for stats!_`, { parse_mode: 'Markdown' });
-      return;
-    }
+  bot.sendMessage(chatId, `📊 *Signal Accuracy Tracker*\n\n⚠️ No signals logged yet!\n\n*What to do:*\n1. Run /signals first\n2. Wait 4 hours\n3. Come back and run /accuracy\n\n_Each time you run /signals, those tokens get tracked automatically._\n\n_Start now: /signals_`, { parse_mode: 'Markdown' });
+  return;
+}
 
     const resolved = signalLog.filter(s => s.resolved && s.result !== 'unknown');
     const wins = resolved.filter(s => s.result === 'win');
@@ -870,6 +895,6 @@ setInterval(async () => {
 
 // Auto resolve signals every 30 min
 setInterval(resolveSignals, 30 * 60 * 1000);
-
+loadSignals();
 console.log('🐦 BirdBot Alpha is running...');
 console.log('Commands: /signals /exit /accuracy /analyze /compare /whale /fear /market /top3 /trending');
