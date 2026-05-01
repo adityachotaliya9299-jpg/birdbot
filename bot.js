@@ -119,7 +119,7 @@ async function resolveSignals() {
 
   signalLog.forEach(signal => {
     if (signal.resolved) return;
-    if (now - signal.time < 4 * 60 * 60 * 1000) return;
+    if (now - signal.time < 2 * 60 * 60 * 1000) return;
 
     const current = tokens.find(t => t.symbol === signal.symbol);
     if (!current) {
@@ -495,7 +495,7 @@ bot.onText(/\/accuracy/, async (msg) => {
       });
     }
 
-    message += `\n_Signals resolve after 4 hours_\n`;
+    message += `\n_Signals resolve after 2 hours_\n`;
     message += `_Powered by Birdeye Data API_`;
 
     bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
